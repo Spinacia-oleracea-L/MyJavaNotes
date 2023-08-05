@@ -49,7 +49,7 @@ Spring Security 中的⽤户对象⽤来描述⽤户并完成对⽤户信息的�
 * GrantedAuthority：定义⽤户所能执⾏的操作权限。
 
   ```java
-  // GrantedAuthority-⽤户拥有权限接⼝
+  // GrantedAuthority-⽤户拥有权限接⼝。UserDetails的第一项属性
   public interface GrantedAuthority extends Serializable {
       
       //获取权限信息
