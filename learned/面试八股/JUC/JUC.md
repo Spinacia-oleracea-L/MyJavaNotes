@@ -103,7 +103,7 @@
 
 * synchronized（同步锁）关键字的作用就是利用一个特定的对象设置一个锁lock（绣球），在多线程（游客）并发访问的时候，同时只允许一个线程（游客）可以获得这个锁，执行特定的代码（迎娶新娘）。执行后释放锁，继续由其他线程争抢。
 
-## 二、Synchronized的使用场景
+## 二、synchronized的使用场景
 
 ### 三种场景对应不同锁对象
 
@@ -435,3 +435,250 @@ public class CyclicBarrierSample {
 }
 ```
 
+# ReentrantLock重入锁
+
+## 一、概述
+
+* 重入锁是指任意线程在获取到锁之后,再次获取该锁而不会被该锁所阻塞
+* ReentrantLock设计的目标是用来替代synchronized关键字
+* 但是由于性能、使用复杂度等原因。**不推荐**使用
+
+## 二、与synchronized的比较
+
+| 特征     | synchronized(推荐)   | ReentrantLock                                       |
+| -------- | -------------------- | --------------------------------------------------- |
+| 底层原理 | JVM实现              | JDK实现                                             |
+| 性能区别 | 低->高（JDK5+)       | 高                                                  |
+| 锁的释放 | 自动释放(编译器保证) | 手动释放(finally保证)                               |
+| 编码程度 | 简单                 | 复杂                                                |
+| 锁的粒度 | 读写不区分           | 读锁、写锁(用于区分读入和写入)                      |
+| 高级功能 | 无                   | 公平锁、非公平锁唤醒；Condition分组唤醒；中断等待锁 |
+
+# Condition条件唤醒
+
+## 一、概述
+
+* 我们在并行程序中，避免不了某些线程要预先规定好的顺序执行，例如：先新增再修改,先买后卖，先进后出......，对于这类场景，使用JUC的Condition对象再合适不过了。
+* JUC中提供了Condition对象，用于让指定线程等待与唤醒，按预期顺序执行。它必须和ReentrantLock重入锁配合使用。
+* Condition用于替代wait()/notify()方法。notify只能随机唤醒等待的线程，而Condition可以唤醒指定的线程，这有利于更好的控制并发程序。
+
+## 二、Condition核心方法
+
+* await() - 阻塞当前线程，直到singal唤醒
+* signal() - 唤醒被await的线程，从中断处继续执行
+* signalAll() - 唤醒所有被await()阻塞的线程
+
+## 三、代码示例
+
+### 1.执行过程
+
+![image-20231211154825072](JUC.assets/image-20231211154825072.png)
+
+### 2.代码
+
+``` java
+package com.itlaoqi.juc;
+
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ConditionSample {
+    public static void main(String[] args) {
+        // Condition必须和ReentrantLock搭配使用
+        ReentrantLock lock = new ReentrantLock();
+        Condition c1 = lock.newCondition();
+        Condition c2 = lock.newCondition();
+        Condition c3 = lock.newCondition();
+
+        // Thread-1
+        new Thread() {
+            @Override
+            public void run() {
+                // 加锁操作
+                lock.lock();
+                try {
+                    // 阻塞当前线程，当c1.signal()时，线程激活继续执行
+                    c1.await();
+                    Thread.sleep(1000);
+                    System.out.println("粒粒皆辛苦");
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    // 解锁操作
+                    lock.unlock();
+                }
+            }
+        }.start();
+
+        // Thread-2
+        new Thread() {
+            @Override
+            public void run() {
+                // 加锁操作
+                lock.lock();
+                try {
+                    // 阻塞当前线程，当c2.signal()时，线程激活继续执行
+                    c2.await();
+                    Thread.sleep(1000);
+                    System.out.println("谁知盘中餐");
+                    c1.signal();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    // 解锁操作
+                    lock.unlock();
+                }
+            }
+        }.start();
+
+        // Thread-3
+        new Thread() {
+            @Override
+            public void run() {
+                // 加锁操作
+                lock.lock();
+                try {
+                    // 阻塞当前线程，当c3.signal()时，线程激活继续执行
+                    c3.await();
+                    Thread.sleep(1000);
+                    System.out.println("汗滴禾下土");
+                    c2.signal();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    // 解锁操作
+                    lock.unlock();
+                }
+            }
+        }.start();
+
+        // Thread-4
+        new Thread() {
+            @Override
+            public void run() {
+                // 加锁操作
+                lock.lock();
+                try {
+                    Thread.sleep(1000);
+                    System.out.println("锄禾日当午");
+                    // T3线程唤醒
+                    c3.signal();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                } finally {
+                    // 解锁操作
+                    lock.unlock();
+                }
+            }
+        }.start();
+    }
+}
+```
+
+# Callable&Future
+
+## 一、概述
+
+* **Callable**和Runnable一样代表着任务，区别在于Callable有**返回值**并且可以抛出异常。
+* **Future**是一个接口。
+  * 它用于表示异步计算的结果。
+  * 提供了检查计算是否完成的方法，以等待计算的完成，并获取计算的结果。
+  * 有点像守护线程，检测着线程完成，并接收结果。
+
+## 二、代码示例
+
+```java
+package com.itlaoqi.juc;
+
+import com.sun.org.apache.xpath.internal.operations.Bool;
+
+import java.util.concurrent.*;
+
+public class FutureSample {
+    public static void main(String[] args) {
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        for(int i = 2 ; i <= 10000 ; i++){
+            Computor c = new Computor();
+            c.setNum(i);
+            //Future是对用于计算的线程进行监听，因为计算是在其他线程中执行的，所以这个返回结果的过程是异步的
+            Future<Boolean> result = executorService.submit(c);//将c对象提交给线程池，如有空闲线程立即执行里面的call方法
+            try {
+                Boolean r = result.get(); //用于获取返回值，如果线程内部的call没有执行完成，则进入等待状态，直到计算完成
+                if(r == true){
+                    System.out.println(c.getNum());
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            } catch (ExecutionException e) {
+                e.printStackTrace();
+            }
+        }
+        executorService.shutdown();
+    }
+}
+// 可以多线程(实现Callable接口)执行的内部类
+class Computor implements Callable<Boolean>{
+    private Integer num;
+
+    public Integer getNum() {
+        return num;
+    }
+
+    public void setNum(Integer num) {
+        this.num = num;
+    }
+    // 测试算法--是否为质数
+    @Override
+    public Boolean call() throws Exception {
+        boolean isprime = true;
+        for(int i = 2 ; i < num ; i++) {
+            if (num % i == 0) {
+                isprime = false;
+                break;
+            }
+        }
+        return isprime;
+    }
+}
+```
+
+# 并发容器
+
+## ArrayList
+
+* CopyOnWriteArrayList - 写复制列表
+  * 为了保护线程安全，先将目标List进行拷贝-Copy，再将操作在新复制的List中进行操作
+  * 提供新思路，多线程中，想要保护一个资源的线程安全，除了加锁让所以线程依次进行操作外(效率慢)，还可以所以线程进行拷贝，之后慢慢操作拷贝资源(效率高)。
+
+## HashSet
+
+* CopyOnWriteArraySet - 写复制集合
+  * 同上
+
+## HashMap
+
+* ConcurrentHashMap- 分段锁映射
+  * 关键是**分段锁**思想
+  * ![image-20231212091706849](JUC.assets/image-20231212091706849.png)
+
+# Atomic包
+
+* 原子性：是指一个操作或多个操作要么全部执行，且执行的过程不会被任何因素打断，要么就都不执行。
+* Atomic包是java.util.concurrent下的另一个专门为线程安全设计的Java包，包含多个原子操作类。
+* Atomic常用类：可以使用这些类完成线程安全操作
+  * AtomicInteger
+  * AtomicIntegerArray
+  * AtomicBoolean
+  * AtomicLong
+  * AtomicLongArray
+
+# CAS算法
+
+## 一、悲观锁和乐观锁
+
+1. 锁是用来做并发最简单的方式，当然其代价也是最高的。独占锁是一种**悲观锁**，**synchronized**就是一种独占锁，它假设最坏的情况，并且只有在确保其它线程不会造成干扰的情况下执行，会导致其它所有需要锁的线程挂起，等待持有锁的线程释放锁。
+2. 所谓**乐观锁**就是，每次不加锁而是假设没有冲突而去完成某项操作，如果因为冲突失败就重试，直到成功为止。其中**CAS**（比较与交换，Compare AndSwap）是一种有名的无锁算法。
+
+## 二、应用场景
+
+* 虽然基于CAS的线程安全机制很好很高效，但要说的是，并非所有线程安全都可以用这样的方法来实现，这只适合一些粒度比较小型,如计数器这样的需求用起来才有效，否则也不会有锁的存在了。
