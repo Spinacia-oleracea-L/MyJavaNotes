@@ -95,7 +95,7 @@
 
 5. 死亡-dead
 
-   ![image-20231205154825072](.\JUC.assets\image-20231205154825072.png)
+   ![image-20231205154825072](./JUC.assets/image-20231205154825072.png)
 
 # 线程同步
 
@@ -381,8 +381,8 @@ public class CountDownSample {
 ## 一、概述
 
 * CyclicBarrier是一个同步工具类，它允许一组线程互相等待，直到到达某个公共屏障点。与CountDownLatch不同的是该barrier在释放等待线程后可以重用，所以称它为循环（Cyclic）的屏障（Barrier）。
-* ![image-20231209165355099](JUC.assets/image-20231209165355099.png)
-* ![image-20231209165452741](JUC.assets/image-20231209165452741.png)
+* ![image-20231209165355099](./JUC.assets/image-20231209165355099.png)
+* ![image-20231209165452741](./JUC.assets/image-20231209165452741.png)
 * 经典应用场景
   * 多线程跑分软件
   * 茅台酒秒杀，固定名额
@@ -472,7 +472,7 @@ public class CyclicBarrierSample {
 
 ### 1.执行过程
 
-![image-20231211154825072](JUC.assets/image-20231211154825072.png)
+![image-20231211154825072](./JUC.assets/image-20231211154825072.png)
 
 ### 2.代码
 
@@ -659,7 +659,7 @@ class Computor implements Callable<Boolean>{
 
 * ConcurrentHashMap- 分段锁映射
   * 关键是**分段锁**思想
-  * ![image-20231212091706849](JUC.assets/image-20231212091706849.png)
+  * ![image-20231212091706849](./JUC.assets/image-20231212091706849.png)
 
 # Atomic包
 
