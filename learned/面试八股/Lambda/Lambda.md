@@ -928,29 +928,422 @@ authorOptional.ifPresent(author -> system.out.println(author.getName()));
 
 ### 4.2.3 获取值
 
+> **不推荐**：若想获取Optional值自己进行处理，可以使用`get()`方法。不推荐原因：因为Optional内部数据为空时会出现异常。
+
+```java
+Optonal<Author> authorOptional = Optional.ofNullable(null);
+Author author = authorOptional.get();
+```
+
 ### 4.2.4 安全获取值
+
+> 如果我们期望安全的获取值，我们不推荐使用get方法，而是使用Optional提供的以下方法：
+
+#### orElseGet
+
+> 获取数据并且设置数据为空时的默认值。如果数据不为空就能获取到该数据，反之根据传入的默认值来创建对象
+
+```java
+Optonal<Author> authorOptional = Optional.ofNullable(getAuthor());
+Author author = authorOptional.orElseGet(() -> new Author(1L, "默认", 18, "默认信息", null));
+```
+
+#### orElseThrow
+
+>  获取数据时，若数据不为空就返回该数据；若为空则根据传入的异常来创建对象抛出(通过统一异常捕获-Spring AOP等，处理异常)
+
+```java
+Optonal<Author> authorOptional = Optional.ofNullable(getAuthor());
+try {
+    Author author = authorOptional.orElseThrow((Supplier<Thorwable>) () -> new RuntimeException("AuthorException : author is null."));
+    System.out.println(author.getName());
+} catch (Throwable throwable) {
+    throwable.printStackTrace();
+}
+```
 
 ### 4.2.5 过滤
 
+> 使用`filter()`方法对数据进行过滤。若原本是有数据的，但是不符合判断，也会变成一个无数据的Optional对象
+
+```java
+Optional<Author> authorOptional = Optional.ofNullable(getAuthor());
+authorOptional.filter(author -> author.getAge() > 100)
+    .ifPresent(author -> System.out.println(author.getName()));
+```
+
 ### 4.2.6 判断
+
+> 使用`isPresent()`方法进行是否存在数据的判断。若为空返回值为false；反正为true。此方法不能体现Optional的好处，**更推荐使用`ifPresen()`方法**
+
+```java
+Optional<Author> authorOptional = Optional.ofNullable(getAuthor());
+if (authorOptional.isPresent()) {
+    System.out.println(authorOptional.get().getName());
+}
+```
 
 ### 4.2.7 数据转换
 
+> 使用`map()`方法对数据进行转换，并且转换后的数据仍是Optional包装好的，保证了使用安全。
+
+例如：获取作家的书籍集合
+
+```java
+Optional<Author> authorOptional = Optional.ofNullable(getAuthor());
+Optional<List<Book>> booksOptional = authorOptional.map(author -> author.getBooks());
+booksOptional.ifPresent(new Consumer<List<Book>>() {
+    @Override
+    public void accept(List<Book> books) {
+        books.forEach(book -> System.out.println(book.getName()));
+    }
+});
+```
+
 # 5. 函数式接口
+
+## 5.1 概述
+
+**只有一个抽象方法**的接口我们称之为函数接口。
+
+JDK的函数式接口都加上了`@FunctionalInterface`注释进行标记。但是无论是否加上该注解只要接口中只有一个抽象方法，都是函数式接口。
+
+## 5.2 常见函数式接口
+
+### Consumer消费接口
+
+> 根据其中抽象方法的参数列表和返回值类型，可以对方法中传入的参数进行消费
+
+```java
+@FunctionalInterface
+public interface Consumser<T> {
+    void accept(T t);
+}
+```
+
+### Function计算转换接口
+
+> 根据其中抽方法的参数列表和返回值类型，可以对方法中对传入的参数计算或转换，把结果返回
+
+```java
+@FunctionalInterface
+public interface Function<T, R> {
+    R accept(T t);
+}
+```
+
+### Predicate判断接口
+
+> 根据其中抽象方法的参数列表和返回值类型，可以在方法中对传入的参数条件判断，返回判断结果
+
+```java
+@FunctionalInterface
+public interface Predicate<T> {
+    boolean test(T t);
+}
+```
+
+### Supplier生产型接口
+
+> 根据其中抽象方法的参数列表和返回值类型，可以在方法中创建对象，把创建好的对象返回
+
+```java
+@FunctionalInterface
+public interface Supplier<T> {
+    boolean test(T t);
+}
+```
+
+## 5.3 常见的默认方法
+
+### `and()`
+
+> 我们在使用Predicate接口时候可能需要进行判断条件的拼接。而`and()`方法相当于是使用&&来拼接两个判断条件
+
+例如：打印作家中年龄大于17**并且**姓名长度大于1的作家
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = authors.stream();
+authorStream.filter(new Predicate<Author>() {
+    @Override
+    public boolean test(Author author) {
+        return author.getAge() > 17;
+    }
+}.and(new Predicate<Author>() {
+        @Override
+        public boolean test(Author author) {
+            return author.getName().lenght() > 1;
+        }
+})).forEach(author -> System.out.println(author));
+// 可以这样使用，但是不推荐，比较繁琐。一般写在一个filter中即可
+// return author.getAge() > 17 && author.getName().lenght() > 1;
+```
+
+```java
+// 一般作为编写lambda方法时使用
+public static void printNum(IntPredicate p1, IntPredicate p2) {
+    int[] arr = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+    for(int i : arr) {
+        if(p1.and(p2).test(i)) {
+            System.out.println(i);
+        }
+    }
+}
+
+public static void main(String[] args) {
+    printNum(value -> value % 2 == 0, value -> value >= 4);
+}
+```
+
+### `or()`
+
+> 我们在使用predicate接口时候可能需要进行判断条件的拼接。而 `or()`方法相当于是使用||来拼接两个判断条件
+
+例如：打印作家中年龄大于17**或者**姓名长度大于2的作家
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = authors.stream();
+authorStream.filter(new Predicate<Author>() {
+    @Override
+    public boolean test(Author author) {
+        return author.getAge() > 17;
+    }
+}.or(new Predicate<Author>() {
+        @Override
+        public boolean test(Author author) {
+            return author.getName().lenght() < 2;
+        }
+})).forEach(author -> System.out.println(author));
+```
+
+### `negate()`
+
+> predicate接口中的方法。negate方法相当于是在判断添加前面加了个!表示取反
+
+例如：打印作家中年龄不大于17的作家
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = authors.stream();
+authorStream.filter(new Predicate<Author>() {
+    @Override
+    public boolean test(Author author) {
+        return author.getAge() > 17;
+    }
+}.negate())
+    .forEach(author -> System.out.println(author))
+```
 
 # 6. 方法引用
 
+## 6.1 概述
+
+我们在使用lambda时，如果方法体中只有一个方法的调用的话(包括构造方法)，我们可以用方法引用进一步简化代码。
+
+> **推荐用法**
+>
+> 我们在使用lambda时不需要考虑什么时候用方法引用，用哪种方法引用，方法引用的格式是什么。我们只需要在写完lambda方法发现方法体只有一行代码，并且是方法的调用时使用快捷键尝试是否能够转换成方法引用即可。
+>
+> 当我们方法引用使用的多了慢慢的也可以直接写出方法引用。
+
+## 6.2 基本格式
+
+`类名或对象名::方法名`
+
+## 6.3 语法详情
+
+### 6.3.1 引用静态方法
+
+#### 格式(其实就是引用类的静态方法)：
+
+> `类名::静态方法名`
+
+#### 使用前提
+
+> 如果我们在重写方法的时候，方法体中**只有一行代码**，并且这行代码是**调用了某个类的静态方法**，并且我们把要重写的**抽象方法中所有的参数**都按照**顺序**传入了这个静态方法中，这个时候我们就可以引用类的静态方法
+
+例如：如下代码就可以使用方法引用进行简化
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = author.stream();
+authorStream.map(author -> author.getAge())
+    .map(age -> String.valueOf(age));
+```
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = author.stream();
+authorStream.map(author -> author.getAge())
+    .map(String::valueof);
+```
+
+> **注意**
+>
+> 如果我们所重写的方法是**没有参数**的，调用的方法也是没有参数的也相当于符合以上条件
+
+### 6.3.2 引用对象的实例方法
+
+#### 格式
+
+> `对象名::方法名`
+
+#### 使用前提
+
+> 如果我们在重写方法的时候，方法体中**只有一行代码**，并且这行代码是**调用了某个对象的成员方法**，并且我们把要写的**抽象方法中所有的参数**都按照**顺序**传入了这个成员方法中，这个时候我们就可以引用对象的实例方法
+
+例如：如下代码就可以使用方法引用进行简化
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = author.stream();
+StringBuilder sb = new StringBuilder();
+authorStream.map(author -> author.getName())
+    .forEach(name -> sb.append(name));
+```
+
+```java
+List<Author> authors = getAuthors();
+Stream<Author> authorStream = author.stream();
+StringBuilder sb = new StringBuilder();
+authorStream.map(author -> author.getName())
+    .forEach(sb::append);
+```
+
+### 6.3.4 引用类的实例方法
+
+#### 格式
+
+> `类名::方法名`
+
+#### 使用前提
+
+> 如果我们在重写方法的时候，方法体中**只有一行代码**，并且这行代码是**调用了第一个参数的成员方法**，并且我们把要重写的**抽象方法中剩余的所有的参数**都按照**顺序**传入了这个成员方法中，这个时候我们就可以引用类的实例方法
+
+例如：如下代码就可以使用方法引用进行简化
+
+```java
+interface UseString{
+	String use(String str, int start, int length);
+}
+public static String subAuthorName(String str, UseString useString){
+    int start = 0;
+    int length = 1;
+    return useString.use(str, start, length);
+}
+public static void main(String[] args) {
+    subAuthorName("testAuthor", new UseString() {
+        @Override
+		public String use(String str, int start, int length) {
+			return str.substring(start, length);
+        }
+    });
+}
+```
+
+```java
+public static void main(String[] args) {
+    subAuthorName("testAuthor", String::substring);
+}
+```
+
+### 6.3.5 构造器引用
+
+#### 格式
+
+> `类名::new`
+
+#### 使用前提
+
+> 如果我们在重写方法的时候，方法体中**只有一行代码**，并且这行代码是**调用了某个类的构造方法**，并且我们把要重写的**抽象方法中的所有的参数**都按照**顺序**传入了这个构造方法中，这个时候我们就可以引用造器。
+
+例如：如下代码就可以使用方法引用进行简化
+
+```java
+List<Author> authors = getAuthors();
+authors.stream()
+    .map(author -> author.getName())
+    .map(name -> new StringBuilder(name))
+    .map(sb -> sb.append("-appendText").toString())
+    .forEach(str -> System.out.println(str));
+```
+
+```java
+List<Author> authors = getAuthors();
+authors.stream()
+    .map(author -> author.getName())
+    .map(StringBuilder::new)
+    .map(sb -> sb.append("-appendText").toString())
+    .forEach(str -> System.out.println(str));
+```
+
 # 7. 高级用法
 
+## 7.1 基本数据类型优化
 
+我们之前用到的很多Stream的方法由于都使用了泛型。所以涉及到的参数和返回值都是**引用数据类型**。
 
+即使我们操作的是整数小数，但是实际用的都是他们的**包装类**。JDK5中引入的自动装箱和自动拆箱让我们在使用对应的**包装类**时就好像使用基本数据类型一样方便。但是你一定要知道**装箱**和拆箱肯定是要**消耗时间**的。
 
+虽然这个时间消耗很下，但是在大量的数据不断的重复装箱拆箱的时候，你就不能无视这个时间损耗了。
 
+所以为了让我们能够对这部分的时间消耗进行优化。 Stream还提供了很多专门针对基本数据类型的方法。
 
+例如： `mapToInt(), mapToLong(), mapToDouble(), flatMapToInt(), flatMapToDouble()` 等。
 
+```java
+private static void test() {
+    List<Author> authors = getAuthors();
+    authors.stream() // 此时Stream<Author>
+        .map(author -> author.getAge()) // 此时Stream<Integer>
+        .map(age -> age + 10) // 此时Stream<Integer> 进行基本类型运算，拆箱装箱
+        .filter(age -> age > 18) // 此时Stream<Integer> 进行基本类型运算，拆箱装箱
+        .map(age -> age + 2) // 此时Stream<Integer> 进行基本类型运算，拆箱装箱
+        .forEach(System.out::println);
+    
+    authors.stream() // 此时Stream<Author>
+        .mapToInt(author -> author.getAge()) // 此时IntStream
+        .map(age -> age + 10) // 此时IntStream
+        .filter(age -> age > 18) // 此时IntStream
+        .map(age -> age + 2) // 此时IntStream
+        .forEach(System.out::println);
+}
+```
 
+## 7.2 并行流
 
+当流中有大量元素时，我们可以使用并行流去提高操作的效率。其实并行流就是吧任务分配给多个线程去执行。如果我们自己去用代码实现的话其实会非常的复杂，并且要求你对并发编程有足够的理解和认识。而如果我们使用 Stream的话，我们只需要修改一个方法的调用，就可以使用并行流来帮我们实现，从而提高效率。
 
+> `parallel()`方法可以把串行流转换成并行流。
 
+```java
+private static void test() {
+	Stream<Integer> stream = Stream.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+    Integer sum = stream.parallel()
+        .peek(new Consumer<Integer>() {
+            @Override
+            public void accept(Integer num) {
+                System.out.println(num + Thread.currentThread().getName());
+            }
+        })
+        .filter(num -> num > 5)
+        .reduce((result, element) -> result + element)
+        .get();
+	System.out.println(sum);
+}
+```
 
+也可以通过`parallelStream()`直接获取并行流对象。
+
+```java
+List<Author> authors = getAuthors();
+authors.parallelStream()
+    .map(author -> author .getAge())
+    .map(age -> age + 10)
+    .filter(age -> age > 18)
+    .map(age -> age + 2)
+    .forEach(System.out::println);
+```
 
