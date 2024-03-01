@@ -197,8 +197,8 @@ public static <R> R typeConver(Function<String, R> function) {
 Lambda写法：
 
 ```java
-public static void main(String[]args) {	        
-	Integer result1 = typeConver(s -> Integer.parseInt(s));
+public static void main(String[]args) {
+    Integer result1 = typeConver(s -> Integer.parseInt(s));
     System.out.println(result1);
     
     String result2 = typeConver(s -> s + "text");
@@ -265,7 +265,7 @@ Java8的Stream使用的是函数式编程模式，如同他的名字一样，它
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Equa1sAndHashcode//用于后期的去重使用
+@EqualsAndHashcode//用于后期的去重使用
 public class Author {
     private Long id;
     //姓名
@@ -283,7 +283,7 @@ public class Author {
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Equa1sAndHashcode//用于后期的去重使用
+@EqualsAndHashcode//用于后期的去重使用
 public class Book {
     private Long id;
     //书名
@@ -435,7 +435,7 @@ authors.stream()
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-@Equa1sAndHashcode//用于后期的去重使用
+@EqualsAndHashcode//用于后期的去重使用
 public class Author implements Comparable<Author> {
     private Long id;
     //姓名
