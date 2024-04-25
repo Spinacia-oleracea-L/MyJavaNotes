@@ -974,7 +974,7 @@ authorOptional.filter(author -> author.getAge() > 100)
 
 ### 4.2.6 判断
 
-> 使用`isPresent()`方法进行是否存在数据的判断。若为空返回值为false；反正为true。此方法不能体现Optional的好处，**更推荐使用`ifPresen()`方法**
+> 使用`isPresent()`方法进行是否存在数据的判断。若为空返回值为false；反正为true。此方法不能体现Optional的好处，**更推荐使用`ifPresent()`方法**
 
 ```java
 Optional<Author> authorOptional = Optional.ofNullable(getAuthor());
@@ -1050,7 +1050,7 @@ public interface Predicate<T> {
 ```java
 @FunctionalInterface
 public interface Supplier<T> {
-    boolean test(T t);
+    T get();
 }
 ```
 
